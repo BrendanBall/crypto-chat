@@ -24,14 +24,15 @@ def router():
 				sockets.append(new_sock)
 				print("Client (%s, %s) connected" % addr)
 			else:
-				try:
+				#try:
 					# get messages from the client
 					data = sock.recv(4096).decode()
 					if data:
-						data = str(data)
+						print(data)
 						# there is something in the socket
 						if data[:5] == "/name":
-							names[data[6:]] = sock
+							names[data[6:].strip()] = sock
+							print("%s is now online" % data[6:])
 						else:
 							send(sock, data)  
 					else:
@@ -41,23 +42,23 @@ def router():
 
 						# at this stage, no data means probably the connection has been broken
 						#broadcast(server_socket, sock, "Client (%s, %s) is offline\n" % addr) 
-				except:
-					#broadcast(server_socket, sock, "Client (%s, %s) is offline\n" % addr)
-					continue
+				#except Exception(e):
+				#	print("an error occurred",e)
+				#	continue
 
 	server_socket.close()
 
 def send(sender, data):
 	# find sender name
 	sender_name = "OOPS"
-	for key, val in names.values():
+	for key, val in names.items():
 		if val == sender:
 			sender_name = key
 	sep = data.find(":")
 	receiver = data[:sep]
 	msg = data[sep+1:].strip()
 	if receiver in names:
-		names[receiver].send(("%s: %s" % (sender_name, data)).encode())
+		names[receiver].send(("%s: %s" % (sender_name, msg)).encode())
 	else:
 		sender.send(("Could not find user %s" % receiver).encode())
 	
