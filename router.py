@@ -27,16 +27,20 @@ def router():
 					# get messages from the client
 					data = sock.recv(4096).decode()
 					if data:
-						print(data)
 						# there is something in the socket
 						if data[:5] == "/name":
 							name = data[6:].strip()
 							clients[name] = sock
 							send("Router", sock, "You are now known as %s" % name)
-							print("%s is now online" % name)
+							print("%s is now known as %s" % (sock.getpeername(), name))
 						else:
-							sep = data.find(":")
-							send(get_name(sock), clients[data[:sep]], data[sep+1:].strip())
+							try:
+								sender_name = get_name(sock)
+								print("(%s) %s" % (sender_name, data))
+								sep = data.find(":")
+								send(sender_name, clients[data[:sep]], data[sep+1:].strip())
+							except Exception:
+								send("Router", sock, "Please register a name with '/name <name>'")
 					else:
 						# remove the socket that's broken
 						if sock in sockets:
@@ -57,7 +61,7 @@ def get_name(sock):
 	raise Exception("Name not found for sock: %s" % sock)
 
 def send(sender_name, receiver_sock, msg):
-	receiver_sock.send(("%s: %s" % (sender_name, msg)).encode())
+	receiver_sock.send(("(%s) %s" % (sender_name, msg)).encode())
 	
 if __name__ == "__main__":
 	router()

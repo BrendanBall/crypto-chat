@@ -39,7 +39,7 @@ def client():
                 # user entered a message
                 msg = sys.stdin.readline().strip()
                 router_socket.send(msg.encode())
-                print("[You] %s" % msg)
+                #print("[You] %s" % msg)
 
 
 if __name__ == "__main__":
