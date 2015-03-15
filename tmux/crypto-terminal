@@ -1,0 +1,17 @@
+new-session -d -s crypto
+rename-window crypto
+split-window -d -t 0 -v
+split-window -d -t 0 -h
+split-window -d -t 2 -h
+
+send-keys -t 0 'workon cryptochat' enter C-l
+send-keys -t 0 'python router.py' enter
+
+send-keys -t 1 'workon cryptochat' enter C-l
+send-keys -t 1 'python client.py localhost 8001' enter
+
+send-keys -t 2 'workon cryptochat' enter C-l
+send-keys -t 2 'python client.py localhost 8001' enter
+
+
+attach
