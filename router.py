@@ -1,8 +1,10 @@
-import socket, select
+import socket
+import select
 
 sockets = [] 
 port = 8001
 clients = {}
+
 
 def router():
 	router_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -15,7 +17,7 @@ def router():
 
 	while True:
 		# check if there are any changes
-		ready_to_read,ready_to_write,in_error = select.select(sockets,[],[],0)
+		ready_to_read, ready_to_write, in_error = select.select(sockets, [], [])
 
 		for sock in ready_to_read:
 			if sock == router_socket: 
@@ -37,10 +39,17 @@ def router():
 							try:
 								sender_name = get_name(sock)
 								print("(%s) %s" % (sender_name, data))
-								sep = data.find(":")
-								send(sender_name, clients[data[:sep]], data[sep+1:].strip())
-							except Exception:
+								msg_tuple = split_msg(data)
+								send(sender_name, clients[msg_tuple[0]], msg_tuple[1])
+							except NotRegisteredException as e:
+								print(e)
 								send("Router", sock, "Please register a name with '/name <name>'")
+							except ReceiverNotGivenException as d:
+								print(d)
+								send("Router", sock, "Please prepend a name with '<receiver name>:<message>'")
+							except KeyError as k:
+								print("%s is not a registered name" % k)
+								send("Router", sock, "The given receiver name does not currently exist")
 					else:
 						# remove the socket that's broken
 						if sock in sockets:
@@ -49,19 +58,37 @@ def router():
 						# at this stage, no data means probably the connection has been broken
 						#broadcast(router_socket, sock, "Client (%s, %s) is offline\n" % addr) 
 				except Exception as e:
-					print("an error occurred",e)
+					print("an error occurred: ", e)
 					continue
 
 	router_socket.close()
+
 
 def get_name(sock):
 	for key, val in clients.items():
 		if val == sock:
 			return key
-	raise Exception("Name not found for sock: %s" % sock)
+	raise NotRegisteredException("Name not found for sock: %s" % sock)
+
+
+def split_msg(msg):
+	sep = msg.find(":")
+	if sep == -1:
+		raise ReceiverNotGivenException("Message does not contain a receiver name: %s" % msg)
+	else:
+		return (msg[:sep], msg[sep:])
+
 
 def send(sender_name, receiver_sock, msg):
 	receiver_sock.send(("(%s) %s" % (sender_name, msg)).encode())
-	
+
+
+class NotRegisteredException(Exception):
+	pass
+
+
+class ReceiverNotGivenException(Exception):
+	pass
+
 if __name__ == "__main__":
 	router()
