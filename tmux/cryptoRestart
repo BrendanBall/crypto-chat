@@ -1,0 +1,11 @@
+
+send-keys -t 0 C-c 
+send-keys -t 0 'python router.py' enter
+
+send-keys -t 1 C-c 
+send-keys -t 1 'python client.py localhost 8001' enter
+send-keys -t 1 '/name bob' enter
+
+send-keys -t 2 C-c 
+send-keys -t 2 'python client.py localhost 8001' enter
+send-keys -t 2 '/name alice' enter
