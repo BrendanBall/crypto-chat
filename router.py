@@ -76,7 +76,7 @@ def split_msg(msg):
 	if sep == -1:
 		raise ReceiverNotGivenException("Message does not contain a receiver name: %s" % msg)
 	else:
-		return (msg[:sep], msg[sep:])
+		return (msg[:sep].strip(), msg[sep:].strip())
 
 
 def send(sender_name, receiver_sock, msg):
@@ -91,4 +91,7 @@ class ReceiverNotGivenException(Exception):
 	pass
 
 if __name__ == "__main__":
-	router()
+	try:
+		router()
+	except KeyboardInterrupt:
+		pass
