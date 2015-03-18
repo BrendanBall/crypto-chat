@@ -24,7 +24,7 @@ def auth_server():
 	# connect to router
 	try:
 		router_socket.connect((host, port))
-		router_socket.send("/name auth_server".encode())
+		router_socket.send("/name Auth".encode())
 	except socket.error:
 		print("Unable to connect")
 		sys.exit()
@@ -46,8 +46,9 @@ def auth_server():
 			message = split_msg(message[1])
 			print(message)
 			if not message[0] == "Router":
-				print("authenticate")
-				auth_request = message[0].split(",")
+				
+				auth_request = message[1].split(",")
+				print("auth request: %s" % auth_request)
 				auth_token = generate_auth_token(auth_request)
 				router_socket.send("%s,%s" % (message[0], auth_token).encode())
 
