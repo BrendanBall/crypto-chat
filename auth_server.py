@@ -48,9 +48,9 @@ def auth_server():
 			print(message)
 			if not message[0] == "Router":
 				print("authenticate")
-				auth_request = message[0].split(":")
+				auth_request = message[0].split(",")
 				auth_token = generate_auth_token(auth_request)
-				router_socket.send("%s:%s" % (message[0], auth_token).encode())
+				router_socket.send("%s,%s" % (message[0], auth_token).encode())
 
 		elif message[0] == "stdin":
 			router_socket.send(message[1].encode())
@@ -74,48 +74,6 @@ def queue_sock_stream(q, s):
 				sys.exit()
 			else:
 				q.put(("socket", data))
-
-
-def generate_auth_token(auth_request):
-	"""
-	d: decrypted text
-	e: encrypted text
-	kbs: with Key shared between B and this auth server
-	"""
-	kbs = get_client_key(auth_request[1])
-	d_kbs = decrypt(kbs, auth_request[3])
-	kba = generate_shared_key()
-	d_kbs = "%s:%s" % (kba, d_kbs)
-	e_kbs = encrypt(kbs, d_kbs)
-
-	kas = get_client_key(auth_request[0])
-	d_kas = "%s:%s:%s%s" % (auth_request[2], kba, auth_request[1], e_kbs)
-	e_kas = encrypt(kas, d_kas)
-	return e_kas
-
-
-def generate_shared_key():
-	return Random.new().read(AES.key_size[2])
-
-
-def generate_iv():
-	return Random.new().read(AES.block_size)
-
-
-def encrypt(key, plaintext):
-	cipher = AES.new(key, AES.MODE_CFB, iv)
-	ciphertext = cipher.encrypt(plaintext.encode())
-	return ciphertext
-
-
-def decrypt(key, ciphertext):
-	cipher = AES.new(key, AES.MODE_CFB, iv)
-	plaintext = cipher.decrypt(ciphertext).decode()
-	return plaintext
-
-
-def get_client_key(name):
-	return name.encode()
 
 
 def split_msg(msg):

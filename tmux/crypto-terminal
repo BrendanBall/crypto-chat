@@ -1,5 +1,8 @@
-new-session -d -s crypto
+new-window
+previous-window
+kill-window
 rename-window crypto
+
 split-window -d -t 0 -v
 split-window -d -t 0 -h
 split-window -d -t 2 -h
@@ -16,6 +19,7 @@ send-keys -t 2 'workon cryptochat' enter C-l
 send-keys -t 2 'python client.py localhost 8001' enter
 send-keys -t 2 '/name alice' enter
 
+send-keys -t 3 'workon cryptochat' enter C-l
+send-keys -t 3 'python auth_server.py localhost 8001' enter
 
 
-attach
