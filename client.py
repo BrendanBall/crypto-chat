@@ -3,6 +3,7 @@ import socket
 import select
 from threading import Thread
 from queue import Queue
+from auth_lib import encrypt, decrypt
 
 
 def client():
@@ -16,6 +17,12 @@ def client():
 	router_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	router_socket.settimeout(2)
 
+	name = ""
+	keyring = {"auth_server": ""}
+	nonces = {}
+	waiting_key_confirmation = []
+	active_channels = []
+
 	# connect to router
 	try:
 		router_socket.connect((host, port))
@@ -23,7 +30,7 @@ def client():
 		print("Unable to connect")
 		sys.exit()
 
-	print("Connected to the router. You can start sending messages")
+	print("Connected to the router. You can start sending msgs")
 
 	# queue is synchronized and completely thread safe
 	chat_queue = Queue()
@@ -35,12 +42,48 @@ def client():
 	while True:
 		# queue.get() default is block=True, timeout=None
 		# so if queue is empty this will block until not empty (just like select)
-		message = chat_queue.get()
-		if message[0] == "socket":
-			print(message[1])
-		elif message[0] == "stdin":
-			router_socket.send(message[1].encode())
+		msg = chat_queue.get()
 
+		# We are receiving a message
+		if msg[0] == "socket":
+			sep = msg[1].find(":")
+			sender, content = msg[1][:sep], msg[1][sep+1:].strip()
+			if sender == "Router":
+				if content.startswith("You are now known as"):
+					name = content.rsplit(" ", 1)[0]
+				print(msg[1])
+			elif sender == "Auth":
+				# Needham–Schroeder protocol (inbound)
+				plaintext = decrypt(keyring[sender], content)
+				nonce, sharedkey, receiver, receiver_block = plaintext.split(",")
+				# TODO: check nonce
+				keyring[receiver] = sharedkey
+				router_socket.send(receiver_block)
+				waiting_key_confirmation.append(receiver)
+			else:
+				if sender in waiting_key_confirmation:
+					waiting_key_confirmation.remove(sender)
+					sender_nonce = eval(decrypt(keyring[sender], content))
+					send_encrypted(sender, encrypt(keyring[sender], sender_nonce-1))
+					active_channels.append(sender)
+				elif sender in active_channels:
+					print(keyring[sender], decrypt(msg[1]))
+				else:
+					print("Error: Got '%s' from '%s'" % (content, sender))
+					
+		# We are sending a message
+		elif msg[0] == "stdin":
+			send_encrypted(keyring, msg[1])
+
+	def send_encrypted(msg):
+		sep = msg.find(":")
+		receiver, content = msg[:sep], msg[sep+1:]
+		if receiver in keyring:
+			router_socket.send(content.encode())
+		else:
+			# Needham–Schroeder protocol (outbound)
+			nonce = ""
+			router_socket.send("%s,%s,%s" % (name,receiver,nonce))
 
 def queue_stdin(q):
 	for line in sys.stdin:
