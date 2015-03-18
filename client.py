@@ -18,9 +18,10 @@ def client():
 	router_socket.settimeout(2)
 
 	name = ""
-	keyring = {"auth_server": ""}
+	keyring = {"Auth": ""}
 	nonces = {}
-	waiting_key_confirmation = []
+	waiting_key_conf_out = [] # Me setting up with someone
+	waiting_key_conf_in = []  # Someone setting up with me
 	active_channels = []
 
 	# connect to router
@@ -61,15 +62,29 @@ def client():
 				router_socket.send(receiver_block)
 				waiting_key_confirmation.append(receiver)
 			else:
-				if sender in waiting_key_confirmation:
-					waiting_key_confirmation.remove(sender)
+				if sender in waiting_key_conf_in:
+					# We have successfully received a connection
+					# TODO: check nonce
+					waiting_key_conf_in.remove(sender)
+					active_channels.append(sender)
+				if sender in waiting_key_conf_out:
+					# We have successfully initiated a connection
+					waiting_key_conf_out.remove(sender)
 					sender_nonce = eval(decrypt(keyring[sender], content))
 					send_encrypted(sender, encrypt(keyring[sender], sender_nonce-1))
 					active_channels.append(sender)
 				elif sender in active_channels:
 					print(keyring[sender], decrypt(msg[1]))
 				else:
-					print("Error: Got '%s' from '%s'" % (content, sender))
+					# Someone else must be trying to set up a connection with us
+					plaintext = decrypt(keyring["Auth"], content)
+					shared_key, sender_name = plaintext.split(",")
+					keyring[sender_name] = shared_key
+					nonce = ""
+					send_encrypted(sender_name, nonce)
+					waiting_conf_in.append(sender)
+					
+
 					
 		# We are sending a message
 		elif msg[0] == "stdin":
