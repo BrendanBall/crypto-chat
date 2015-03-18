@@ -3,8 +3,7 @@ import socket
 import select
 from threading import Thread
 from queue import Queue
-from Crypto import Random
-from Crypto.Cipher import AES
+from auth_lib import *
 
 
 # initialization vector
