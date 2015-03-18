@@ -3,8 +3,7 @@ import socket
 import select
 from threading import Thread
 from queue import Queue
-from auth_lib import encrypt, decrypt
-
+from auth_lib import encrypt, decrypt, hash_sha256
 
 def client():
 	if len(sys.argv) < 3:
@@ -40,6 +39,15 @@ def client():
 	thread_sock = Thread(target=queue_sock_stream, args=(chat_queue, router_socket), daemon=True)
 	thread_sock.start()
 
+	def send_encrypted(receiver_name, msg):
+		if receiver_name in keyring:
+			router_socket.send(encrypt(keyring[receiver_name], msg).encode())
+		else:
+			# Needham–Schroeder protocol (outbound)
+			nonce = ""
+			content = "Auth: %s,%s,%s" % (name, receiver_name, nonce)
+			router_socket.send(content.encode())
+
 	while True:
 		# queue.get() default is block=True, timeout=None
 		# so if queue is empty this will block until not empty (just like select)
@@ -47,11 +55,12 @@ def client():
 
 		# We are receiving a message
 		if msg[0] == "socket":
-			sep = msg[1].find(":")
-			sender, content = msg[1][:sep], msg[1][sep+1:].strip()
+			sep = msg[1].find(")")
+			sender, content = msg[1][1:sep], msg[1][sep+1:].strip()
 			if sender == "Router":
 				if content.startswith("You are now known as"):
-					name = content.rsplit(" ", 1)[0]
+					name = content.rsplit(" ", 1)[1]
+					keyring["Auth"] = hash_sha256(name)
 				print(msg[1])
 			elif sender == "Auth":
 				# Needham–Schroeder protocol (inbound)
@@ -84,26 +93,18 @@ def client():
 					send_encrypted(sender_name, nonce)
 					waiting_conf_in.append(sender)
 					
-
-					
 		# We are sending a message
 		elif msg[0] == "stdin":
-			send_encrypted(keyring, msg[1])
-
-	def send_encrypted(msg):
-		sep = msg.find(":")
-		receiver, content = msg[:sep], msg[sep+1:]
-		if receiver in keyring:
-			router_socket.send(content.encode())
-		else:
-			# Needham–Schroeder protocol (outbound)
-			nonce = ""
-			router_socket.send("%s,%s,%s" % (name,receiver,nonce))
+			if msg[1].startswith("/name"):
+				router_socket.send(msg[1].encode())
+			else:
+				sep = msg[1].find(":")
+				receiver, content = msg[1][:sep], msg[1][sep+1:].strip()
+				send_encrypted(receiver, content)
 
 def queue_stdin(q):
 	for line in sys.stdin:
 		q.put(("stdin", line.strip()))
-
 
 def queue_sock_stream(q, s):
 	while True:
@@ -118,7 +119,6 @@ def queue_sock_stream(q, s):
 				sys.exit()
 			else:
 				q.put(("socket", data))
-
 
 if __name__ == "__main__":
 	client()

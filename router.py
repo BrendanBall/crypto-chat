@@ -30,7 +30,7 @@ def router():
 					data = sock.recv(4096).decode()
 					if data:
 						# there is something in the socket
-						if data[:5] == "/name":
+						if data.startswith("/name"):
 							name = data[6:].strip()
 							clients[name] = sock
 							send("Router", sock, "You are now known as %s" % name)

@@ -2,6 +2,7 @@ from Crypto import Random
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
 
+iv = b'sixteen byte key'
 
 def generate_auth_token(auth_request):
 	"""
