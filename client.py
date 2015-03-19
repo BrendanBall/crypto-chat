@@ -67,7 +67,8 @@ def client(chat_queue):
 				# Someone wants to set up a secure connection
 				init_key.append(sender)
 				nonces[sender] = 1 #TODO: make nonce
-				send_encrypted(sender, keys["Auth"], nonces[sender])
+				plaintext = "%s,%s" % (sender, nonces[sender])
+				send_encrypted(sender, keys["Auth"], plaintext)
 			
 			elif sender in init_key:
 				# Someone has sent us a shared key
