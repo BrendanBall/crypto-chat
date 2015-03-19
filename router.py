@@ -40,6 +40,7 @@ def router():
 								sender_name = get_name(sock)
 								print("(%s) %s" % (sender_name, data))
 								msg_tuple = split_msg(data)
+								print(msg_tuple)
 								send(sender_name, clients[msg_tuple[0]], msg_tuple[1])
 							except NotRegisteredException as e:
 								print(e)
@@ -76,7 +77,7 @@ def split_msg(msg):
 	if sep == -1:
 		raise ReceiverNotGivenException("Message does not contain a receiver name: %s" % msg)
 	else:
-		return (msg[:sep].strip(), msg[sep:].strip())
+		return (msg[:sep].strip(), msg[sep+1:].strip())
 
 
 def send(sender_name, receiver_sock, msg):
