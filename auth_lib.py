@@ -18,6 +18,7 @@ def generate_auth_token(auth_request):
 	e_kbs = encrypt(kbs, d_kbs)
 	kas = get_client_key(auth_request[0])
 	d_kas = "%s,%s,%s,%s" % (auth_request[2], kba, auth_request[1], e_kbs)
+	print("(%s:unecrypted) %s" % (auth_request[0], d_kas))
 	e_kas = encrypt(kas, d_kas)
 	return e_kas
 
@@ -25,22 +26,18 @@ def generate_auth_token(auth_request):
 def generate_auth_token_simple(auth_request):
 	kbs = get_client_key(auth_request[1])
 	kas = get_client_key(auth_request[0])
-	print("client key for kbs: %s" % kbs)
 	kba = generate_shared_key()
-	print("key for kba: %s" % kba)
-
 	d_kbs = "%s,%s" % (kba, auth_request[0])
 	e_kbs = encrypt(kbs, d_kbs)
 	d_kas = "%s,%s,%s,%s" % (auth_request[2], kba, auth_request[1], e_kbs)
-	#print("unencrypted auth_token: ", d_kas)
 	e_kas = encrypt(kas, d_kas)
-	#print(e_kas)
-	print("encrypt decrypt: ",decrypt(kas, e_kas))
+	print("type of base63: %s" % type(e_kas))
+	print(e_kas)
 
 	return e_kas
 
 def generate_shared_key():
-	return base64.b64encode(Random.new().read(AES.key_size[2]))
+	return base64.b64encode(Random.new().read(AES.key_size[2])).decode()
 
 
 def generate_iv():
@@ -48,29 +45,24 @@ def generate_iv():
 
 
 def encrypt(key, plaintext):
-	cipher = AES.new(base64.b64decode(key), AES.MODE_CFB, iv)
+	cipher = AES.new(base64.b64decode(key.encode()), AES.MODE_CFB, iv)
 	ciphertext = cipher.encrypt(plaintext.encode())
-	return base64.b64encode(ciphertext)
+	return (base64.b64encode(ciphertext)).decode()
 
 
 def decrypt(key, ciphertext):
-	with open("testfile.log", "a") as outfile:
-		print("decrypted before decoding: key:\n%s\nciphertext:\n %s\n" % (key,ciphertext), file=outfile)
-	cipher = AES.new(base64.b64decode(key), AES.MODE_CFB, iv)
-	plaintext = cipher.decrypt(base64.b64decode(ciphertext))
-	
+	cipher = AES.new(base64.b64decode(key.encode()), AES.MODE_CFB, iv)
+	plaintext = cipher.decrypt(base64.b64decode(ciphertext.encode()))
 	plaintext = plaintext.decode()
-	print(plaintext)
 	return plaintext
 
 def hash_sha256(plaintext):
 	hash = SHA256.new()
 	hash.update(plaintext.encode())
-	return base64.b64encode(hash.digest())
+	return base64.b64encode(hash.digest()).decode()
 
 
 def get_client_key(name):
 	""" This is purely for simulation purposes """
 	hash = hash_sha256(name)
-	print(type(hash))
 	return hash
