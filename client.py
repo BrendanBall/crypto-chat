@@ -39,6 +39,20 @@ def client(chat_queue):
 		if msg[0] == "socket":
 			sep = msg[1].find(")")
 			sender, content = msg[1][1:sep], msg[1][sep+1:].strip()
+			
+
+			if sender in init_nonce:
+				print("init_nonce")
+			if sender in auth_ack:
+				print("auth_ack")
+			if sender in key_ack:
+				print("key_ack")
+			if sender in init_key:
+				print("init_key")
+			if sender in nonce_ack:
+				print("nonce_ack")
+			if sender in active:
+				print("active")
 
 			if sender == "Router":
 				if content.startswith("You are now known as"):
@@ -47,23 +61,11 @@ def client(chat_queue):
 					keys["Auth"] = hash_sha256(name)
 				print(msg[1])
 
-			elif sender == "Auth":
-				# We now have a shared key
-				plaintext = decrypt(keys["Auth"], content)
-				nonce, sharedkey, receiver, receiver_block = plaintext.split(",")
-				# TODO: check nonce
-				
-				auth_ack.remove(receiver)
-				key_ack.append(receiver)
-
-				keys[receiver] = sharedkey
-				text = "%s: %s" % (receiver, receiver_block)
-				router.send(ciphertext.encode())
 
 
 			# Client B
 			#---------
-			elif sender not in (set(init_nonce)|set(auth_ack)|set(key_ack)|set(nonce_ack)|set(active)):
+			elif sender not in (set(init_nonce)|set(auth_ack)|set(key_ack)|set(nonce_ack)|set(init_key)|set(active)):
 				# Someone wants to set up a secure connection
 				init_key.append(sender)
 				nonces[sender] = 1 #TODO: make nonce
@@ -73,13 +75,13 @@ def client(chat_queue):
 				# Someone has sent us a shared key
 				init_key.remove(sender)
 				nonce_ack.append(sender)
-
+				
 				plaintext = decrypt(keys["Auth"], content)
 				shared_key, sender_name, nonce = plaintext.split(",")
 				# TODO: check nonce
 				keys[sender_name] = shared_key
 
-				new_nonce = 2
+				new_nonce = 5
 				ciphertext = "%s: %s" % (sender_name, encrypt(keys[sender_name], new_nonce))
 				router.send(ciphertext.encode())
 			
@@ -92,7 +94,6 @@ def client(chat_queue):
 			elif sender in active:
 				# We have a secure message
 				plaintext = decrypt(keys[sender], content)
-				print(plaintext)
 
 			# Client A
 			#---------
@@ -104,6 +105,21 @@ def client(chat_queue):
 				text = "Auth: %s,%s,%s,%s" % (name, sender, nonces[sender], content)
 				router.send(text.encode())
 			
+			elif sender in auth_ack:
+				# We now have a shared key from the Auth server
+				if sender is not "Auth":
+					raise Exception("Expected to get a message from the Auth server and didn't")
+				plaintext = decrypt(keys["Auth"], content)
+				nonce, sharedkey, receiver, receiver_block = plaintext.split(",")
+				# TODO: check nonce
+				
+				auth_ack.remove(receiver)
+				key_ack.append(receiver)
+
+				keys[receiver] = sharedkey
+				text = "%s: %s" % (receiver, receiver_block)
+				router.send(text.encode())
+
 			elif sender in key_ack:
 				# We have gotten an encrypted nonce from the other client
 				key_ack.remove(sender)

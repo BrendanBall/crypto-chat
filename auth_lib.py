@@ -11,6 +11,7 @@ def generate_auth_token(auth_request):
 	e: encrypted text
 	kbs: with Key shared between B and this auth server
 	"""
+	print(">>", auth_request)
 	kbs = get_client_key(auth_request[1])
 	d_kbs = decrypt(kbs, auth_request[3])
 	kba = generate_shared_key()
@@ -23,19 +24,6 @@ def generate_auth_token(auth_request):
 	return e_kas
 
 
-def generate_auth_token_simple(auth_request):
-	kbs = get_client_key(auth_request[1])
-	kas = get_client_key(auth_request[0])
-	kba = generate_shared_key()
-	d_kbs = "%s,%s" % (kba, auth_request[0])
-	e_kbs = encrypt(kbs, d_kbs)
-	d_kas = "%s,%s,%s,%s" % (auth_request[2], kba, auth_request[1], e_kbs)
-	e_kas = encrypt(kas, d_kas)
-	print("type of base63: %s" % type(e_kas))
-	print(e_kas)
-
-	return e_kas
-
 def generate_shared_key():
 	return base64.b64encode(Random.new().read(AES.key_size[2])).decode()
 
@@ -46,7 +34,7 @@ def generate_iv():
 
 def encrypt(key, plaintext):
 	cipher = AES.new(base64.b64decode(key.encode()), AES.MODE_CFB, iv)
-	ciphertext = cipher.encrypt(plaintext.encode())
+	ciphertext = cipher.encrypt(str(plaintext).encode())
 	return (base64.b64encode(ciphertext)).decode()
 
 
