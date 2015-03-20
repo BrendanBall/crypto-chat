@@ -32,25 +32,29 @@ def generate_iv():
 	return Random.new().read(AES.block_size)
 
 
-def encrypt(key, plaintext):
+def encrypt(key, plaintext, bytes=False):
 	"""
 		each message gets encrypted with a new iv.
 		the iv is prepended to the ciphertext before encoding it.
 	"""
 	iv = generate_iv()
 	cipher = AES.new(base64.b64decode(key.encode()), AES.MODE_CFB, iv)
-	ciphertext = cipher.encrypt(str(plaintext).encode())
+	if not bytes:
+		ciphertext = cipher.encrypt(str(plaintext).encode())
+	else:
+		ciphertext = cipher.encrypt(plaintext)
 	ciphertext = iv + ciphertext
 	return (base64.b64encode(ciphertext)).decode()
 
 
-def decrypt(key, ciphertext):
+def decrypt(key, ciphertext, bytes=False):
 	ciphertext = base64.b64decode(ciphertext.encode())
 	iv = ciphertext[:AES.block_size]
 	ciphertext = ciphertext[AES.block_size:]
 	cipher = AES.new(base64.b64decode(key.encode()), AES.MODE_CFB, iv)
 	plaintext = cipher.decrypt(ciphertext)
-	plaintext = plaintext.decode()
+	if not bytes:
+		plaintext = plaintext.decode()
 	return plaintext
 
 def hash_sha256(plaintext):

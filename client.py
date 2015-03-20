@@ -117,8 +117,11 @@ def client(chat_queue):
 			
 			elif sender in active:
 				# We have a secure message
-				plaintext = decrypt(keys[sender], content)
-				print("(%s) %s" % (sender, plaintext))
+				if content.startswith("file:"):
+					receive_file(sender, content[5:])
+				else:
+					plaintext = decrypt(keys[sender], content)
+					print("(%s) %s" % (sender, plaintext))
 
 		############################
 		# We are sending a message #
@@ -129,6 +132,9 @@ def client(chat_queue):
 def process_message(msg):
 	if msg.startswith("/name"):
 		router.send(msg.encode())
+	elif msg.startswith("/file"):
+		fileargs = msg.split(" ")
+		send_file(fileargs[1], fileargs[2])
 	else:
 		sep = msg.find(":")
 		receiver, content = msg[:sep], msg[sep+1:].strip()
@@ -144,6 +150,32 @@ def process_message(msg):
 def send_encrypted(receiver, key, msg):
 	ciphertext = "%s: %s" % (receiver, encrypt(key, msg))
 	router.send(ciphertext.encode())
+
+
+def send_file(receiver, filepath):
+	try:
+		filebytes = b''
+		with open(filepath, "rb") as readfile:
+			filebytes = readfile.read()
+			print("loaded file into memory")
+			ciphertext = encrypt(keys[receiver] ,filebytes, bytes=True)
+			print(ciphertext)
+			message = "%s:file:%s" % (receiver, ciphertext)
+			router.send(message.encode())
+			print("file sent")
+	except IOError as e:
+		print("File not found, %s" % e)
+	except MemoryError as m:
+		print("Not enough memory, file too big, %s" % m)
+
+
+def receive_file(sender, message):
+	print(message)
+	filebytes = decrypt(keys[sender], message, bytes=True)
+	with open("tempfile","wb") as writefile:
+		writefile.write(filebytes)
+	print("file received")
+
 
 def queue_stdin(q):
 	for line in sys.stdin:
