@@ -22,4 +22,4 @@ send-keys -t 2 '/name alice' enter
 send-keys -t 3 'workon crypto-chat' enter C-l
 send-keys -t 3 'python auth_server.py localhost 8001' enter
 
-
+select-pane -R
