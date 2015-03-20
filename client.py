@@ -3,7 +3,7 @@ import socket
 import select
 from threading import Thread
 from queue import Queue
-from auth_lib import encrypt, decrypt, hash_sha256
+from helpers import encrypt, decrypt, hash_sha256
 
 # Globals
 name = ""
@@ -41,20 +41,6 @@ def client(chat_queue):
 		if msg[0] == "socket":
 			sep = msg[1].find(")")
 			sender, content = msg[1][1:sep], msg[1][sep+1:].strip()
-			
-			#print("Got message from:", sender)
-			#if sender in init_nonce:
-				#print("init_nonce")
-			#if len(auth_ack)>0:
-				#print("auth_ack")
-			#if sender in key_ack:
-				#print("key_ack")
-			#if sender in init_key:
-				#print("init_key")
-			#if sender in nonce_ack:
-				#print("nonce_ack")
-			#if sender in active:
-				#print("active")
 
 			if sender == "Router":
 				if content.startswith("You are now known as"):
@@ -62,7 +48,6 @@ def client(chat_queue):
 					name = content.rsplit(" ", 1)[1]
 					keys["Auth"] = hash_sha256(name)
 				print(msg[1])
-
 
 			# Client A
 			#---------
@@ -133,8 +118,7 @@ def client(chat_queue):
 			elif sender in active:
 				# We have a secure message
 				plaintext = decrypt(keys[sender], content)
-				print(plaintext)
-
+				print("(%s) %s" % (sender, plaintext))
 
 		############################
 		# We are sending a message #
@@ -148,7 +132,6 @@ def process_message(msg):
 	else:
 		sep = msg.find(":")
 		receiver, content = msg[:sep], msg[sep+1:].strip()
-		
 		if receiver in active:
 			send_encrypted(receiver, keys[receiver], content)
 		else:

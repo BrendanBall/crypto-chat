@@ -6,10 +6,15 @@ We have made one key simplification to the protocol. In reality, each client wou
 
 ## Instructions
 Run the router: 
+
 `python3 router.py`
+
 Run the auth server: 
+
 `python3 auth.py host 8001`
+
 Connect with as many clients as you like, with: 
+
 `python3 client.py host 8001`
 
 If your clients are on the same machine as the router, `host` is localhost.

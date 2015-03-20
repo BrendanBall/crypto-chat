@@ -3,7 +3,7 @@ import socket
 import select
 from threading import Thread
 from queue import Queue
-from auth_lib import *
+from helpers import *
 
 
 # initialization vector
