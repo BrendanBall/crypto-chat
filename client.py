@@ -9,6 +9,8 @@ from auth_lib import encrypt, decrypt, hash_sha256
 name = ""
 keys = {}
 nonces = {}
+# Used as temp storage for messages which a client tried to send before they had a secure connection
+msg_store = []
 
 # States. A full state machine could be used, but the protocol is simple enough to go without.
 # These are named according to what we are waiting for.
@@ -40,19 +42,19 @@ def client(chat_queue):
 			sep = msg[1].find(")")
 			sender, content = msg[1][1:sep], msg[1][sep+1:].strip()
 			
-			print("Got message from:", sender)
-			if sender in init_nonce:
-				print("init_nonce")
-			if len(auth_ack)>0:
-				print("auth_ack")
-			if sender in key_ack:
-				print("key_ack")
-			if sender in init_key:
-				print("init_key")
-			if sender in nonce_ack:
-				print("nonce_ack")
-			if sender in active:
-				print("active")
+			#print("Got message from:", sender)
+			#if sender in init_nonce:
+				#print("init_nonce")
+			#if len(auth_ack)>0:
+				#print("auth_ack")
+			#if sender in key_ack:
+				#print("key_ack")
+			#if sender in init_key:
+				#print("init_key")
+			#if sender in nonce_ack:
+				#print("nonce_ack")
+			#if sender in active:
+				#print("active")
 
 			if sender == "Router":
 				if content.startswith("You are now known as"):
@@ -91,8 +93,13 @@ def client(chat_queue):
 				active.append(sender)
 
 				plaintext = decrypt(keys[sender], content)
-				ciphertext = encrypt(keys[sender], eval(plaintext)-1)
+				ciphertext = "%s: %s" % (sender, encrypt(keys[sender], eval(plaintext)-1))
 				router.send(ciphertext.encode())
+
+				# Send any stored messages
+				for msg in msg_store:
+					process_message(msg)
+				msg_store.clear()
 
 			# Client B
 			#---------
@@ -109,7 +116,6 @@ def client(chat_queue):
 				nonce_ack.append(sender)
 				
 				plaintext = decrypt(keys["Auth"], content)
-				print(">>",plaintext)
 				shared_key, sender_name, nonce = plaintext.split(",")
 				# TODO: check nonce
 				keys[sender_name] = shared_key
@@ -127,26 +133,30 @@ def client(chat_queue):
 			elif sender in active:
 				# We have a secure message
 				plaintext = decrypt(keys[sender], content)
+				print(plaintext)
 
 
 		############################
 		# We are sending a message #
 		############################
 		elif msg[0] == "stdin":
-			if msg[1].startswith("/name"):
-				router.send(msg[1].encode())
-			else:
-				sep = msg[1].find(":")
-				receiver, content = msg[1][:sep], msg[1][sep+1:].strip()
-				
-				if receiver in keys:
-					send_encrypted(receiver, keys[receiver], content)
-				else:
-					# Init protocol with the other client
-					init_nonce.append(receiver)
-					text = "%s: %s" % (receiver, name)
-					router.send(text.encode())
+			process_message(msg[1])
 
+def process_message(msg):
+	if msg.startswith("/name"):
+		router.send(msg.encode())
+	else:
+		sep = msg.find(":")
+		receiver, content = msg[:sep], msg[sep+1:].strip()
+		
+		if receiver in active:
+			send_encrypted(receiver, keys[receiver], content)
+		else:
+			# Init protocol with the other client
+			msg_store.append(msg) # Store the message to send it once we have a connection
+			init_nonce.append(receiver)
+			text = "%s: %s" % (receiver, name)
+			router.send(text.encode())
 
 def send_encrypted(receiver, key, msg):
 	ciphertext = "%s: %s" % (receiver, encrypt(key, msg))
