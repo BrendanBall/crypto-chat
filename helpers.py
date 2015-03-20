@@ -57,6 +57,11 @@ def decrypt(key, ciphertext, bytes=False):
 		plaintext = plaintext.decode()
 	return plaintext
 
+def get_nonce():
+	# This returns a random 32 bit int
+	r = Random.new()
+	return int.from_bytes(r.read(4), byteorder='little')	
+
 def hash_sha256(plaintext):
 	hash = SHA256.new()
 	hash.update(plaintext.encode())
@@ -67,3 +72,4 @@ def get_client_key(name):
 	""" This is purely for simulation purposes """
 	hash = hash_sha256(name)
 	return hash
+

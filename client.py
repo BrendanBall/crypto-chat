@@ -3,9 +3,12 @@ import socket
 import select
 from threading import Thread
 from queue import Queue
-from helpers import encrypt, decrypt, hash_sha256
+from helpers import encrypt, decrypt, hash_sha256, get_nonce
 
 # Globals
+router = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+router.settimeout(5)
+
 name = ""
 keys = {}
 nonces = {}
@@ -22,11 +25,13 @@ active     = [] # Clients which are completely set up
 init_nonce = [] # Requested a nonce from receiver
 auth_ack   = [] # Waiting for the auth server to send the share key etc
 key_ack    = [] # Sent the shared key, encrypted with the receiver's master key
+final_ack  = [] # Sent back nonce-1, waiting for confirmation that B's connection is open
 
 # Client B side
 init_key   = [] # Someone has requested a nonce. We are waiting for the shared key
 nonce_ack  = [] # Sent my nonce, encrypted with the shared key
 
+states = [active, init_nonce, auth_ack, key_ack, final_ack, init_key, nonce_ack]
 
 def client(chat_queue):
 	# Main logic
@@ -42,12 +47,17 @@ def client(chat_queue):
 			sep = msg[1].find(")")
 			sender, content = msg[1][1:sep], msg[1][sep+1:].strip()
 
+			# Control messages
+			#-----------------
 			if sender == "Router":
 				if content.startswith("You are now known as"):
 					# Confirm up my own name
 					name = content.rsplit(" ", 1)[1]
 					keys["Auth"] = hash_sha256(name)
 				print(msg[1])
+			
+			elif content == "/cancel":
+				cancel_connection(sender)
 
 			# Client A
 			#---------
@@ -55,7 +65,7 @@ def client(chat_queue):
 				# We have gotten a nonce encrypted with the other client's master key
 				init_nonce.remove(sender)
 				auth_ack.append(sender)
-				nonces[sender] = 1 # TODO
+				nonces[sender] = get_nonce()
 				text = "Auth: %s,%s,%s,%s" % (name, sender, nonces[sender], content)
 				router.send(text.encode())
 			
@@ -63,7 +73,8 @@ def client(chat_queue):
 				# We now have a shared key from the Auth server
 				plaintext = decrypt(keys["Auth"], content)
 				nonce, sharedkey, receiver, receiver_block = plaintext.split(",")
-				# TODO: check nonce
+				if not check_nonce(receiver, int(nonce)):
+					continue
 				
 				auth_ack.remove(receiver)
 				key_ack.append(receiver)
@@ -75,23 +86,29 @@ def client(chat_queue):
 			elif sender in key_ack:
 				# We have gotten an encrypted nonce from the other client
 				key_ack.remove(sender)
-				active.append(sender)
+				final_ack.append(sender)
 
 				plaintext = decrypt(keys[sender], content)
 				ciphertext = "%s: %s" % (sender, encrypt(keys[sender], eval(plaintext)-1))
 				router.send(ciphertext.encode())
 
-				# Send any stored messages
-				for msg in msg_store:
-					process_message(msg)
-				msg_store.clear()
+			elif sender in final_ack:
+				# Final 3 way handshake confirmation
+				if content == "open":
+					final_ack.remove(sender)
+					active.append(sender)
+
+					# Send any stored messages
+					for msg in msg_store:
+						process_message(msg)
+					msg_store.clear()
 
 			# Client B
 			#---------
-			elif sender not in (set(init_nonce)|set(auth_ack)|set(key_ack)|set(nonce_ack)|set(init_key)|set(active)):
+			elif sender not in [x for state in states for x in state]:
 				# Someone wants to set up a secure connection
 				init_key.append(sender)
-				nonces[sender] = 1 #TODO: make nonce
+				nonces[sender] = get_nonce()
 				plaintext = "%s,%s" % (sender,nonces[sender])
 				send_encrypted(sender, keys["Auth"], plaintext)
 			
@@ -102,19 +119,28 @@ def client(chat_queue):
 				
 				plaintext = decrypt(keys["Auth"], content)
 				shared_key, sender_name, nonce = plaintext.split(",")
-				# TODO: check nonce
+				check_nonce(sender_name, int(nonce))
+
 				keys[sender_name] = shared_key
 
-				new_nonce = 5
-				ciphertext = "%s: %s" % (sender_name, encrypt(keys[sender_name], new_nonce))
+				# make a new nonce to authenticate that both parties have the key
+				nonces[sender] = get_nonce()
+				ciphertext = "%s: %s" % (sender_name, encrypt(keys[sender_name], nonces[sender]))
 				router.send(ciphertext.encode())
-			
+				
 			elif sender in nonce_ack:
 				# We have confirmed the connection
-				# TODO: check nonce
+				nonce = int(decrypt(keys[sender], content))
+				if not check_nonce(sender, nonce+1):
+					continue
+
 				nonce_ack.remove(sender)
 				active.append(sender)
-			
+				
+				# Do the final 3-way handshake
+				text = "%s: open" % sender
+				router.send(text.encode())
+
 			elif sender in active:
 				# We have a secure message
 				if content.startswith("file:"):
@@ -128,6 +154,25 @@ def client(chat_queue):
 		############################
 		elif msg[0] == "stdin":
 			process_message(msg[1])
+
+def check_nonce(name, nonce):
+	if not nonces[name] == nonce:
+		print("%s responded with wrong nonce" % name)
+		cancel_connection(name)
+		print("Cancelling connection with %s" % name)
+		text = "%s: /cancel" % name
+		router.send(text.encode())
+		return False
+	return True
+
+def cancel_connection(name):
+	for state in states:
+		if name in state:
+			state.remove(name)
+	if name in keys:
+		del keys[name]
+	if name in nonces:
+		del nonces[name]
 
 def process_message(msg):
 	if msg.startswith("/name"):
@@ -204,8 +249,6 @@ if __name__ == "__main__":
 	host = sys.argv[1]
 	port = int(sys.argv[2])
 
-	router = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	router.settimeout(5)
 	
 	# Connect to router
 	try:
