@@ -33,14 +33,23 @@ def generate_iv():
 
 
 def encrypt(key, plaintext):
+	"""
+		each message gets encrypted with a new iv.
+		the iv is prepended to the ciphertext before encoding it.
+	"""
+	iv = generate_iv()
 	cipher = AES.new(base64.b64decode(key.encode()), AES.MODE_CFB, iv)
 	ciphertext = cipher.encrypt(str(plaintext).encode())
+	ciphertext = iv + ciphertext
 	return (base64.b64encode(ciphertext)).decode()
 
 
 def decrypt(key, ciphertext):
+	ciphertext = base64.b64decode(ciphertext.encode())
+	iv = ciphertext[:AES.block_size]
+	ciphertext = ciphertext[AES.block_size:]
 	cipher = AES.new(base64.b64decode(key.encode()), AES.MODE_CFB, iv)
-	plaintext = cipher.decrypt(base64.b64decode(ciphertext.encode()))
+	plaintext = cipher.decrypt(ciphertext)
 	plaintext = plaintext.decode()
 	return plaintext
 
