@@ -11,7 +11,6 @@ def generate_auth_token(auth_request):
 	e: encrypted text
 	kbs: with Key shared between B and this auth server
 	"""
-	print(">>", auth_request)
 	kbs = get_client_key(auth_request[1])
 	d_kbs = decrypt(kbs, auth_request[3])
 	kba = generate_shared_key()
@@ -19,7 +18,6 @@ def generate_auth_token(auth_request):
 	e_kbs = encrypt(kbs, d_kbs)
 	kas = get_client_key(auth_request[0])
 	d_kas = "%s,%s,%s,%s" % (auth_request[2], kba, auth_request[1], e_kbs)
-	print("(%s:unecrypted) %s" % (auth_request[0], d_kas))
 	e_kas = encrypt(kas, d_kas)
 	return e_kas
 

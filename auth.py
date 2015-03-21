@@ -48,7 +48,7 @@ def auth_server():
 			if not message[0] == "Router":
 				auth_request = message[1].split(",")
 				auth_token = generate_auth_token(auth_request)
-				msg_send = "%s:%s" % (message[0], auth_token)
+				msg_send = "%s: %s" % (message[0], auth_token)
 				router_socket.send(msg_send.encode())
 
 		elif message[0] == "stdin":

@@ -33,7 +33,7 @@ nonce_ack  = [] # Sent my nonce, encrypted with the shared key
 
 states = [active, init_nonce, auth_ack, key_ack, final_ack, init_key, nonce_ack]
 
-def client(chat_queue):
+def client(chat_queue, name):
 	# Main logic
 	while True:
 		# queue.get() default is block=True, timeout=None
@@ -100,7 +100,7 @@ def client(chat_queue):
 
 					# Send any stored messages
 					for msg in msg_store:
-						process_message(msg)
+						process_message(msg, name)
 					msg_store.clear()
 
 			# Client B
@@ -153,7 +153,7 @@ def client(chat_queue):
 		# We are sending a message #
 		############################
 		elif msg[0] == "stdin":
-			process_message(msg[1])
+			process_message(msg[1], name)
 
 def check_nonce(name, nonce):
 	if not nonces[name] == nonce:
@@ -174,7 +174,7 @@ def cancel_connection(name):
 	if name in nonces:
 		del nonces[name]
 
-def process_message(msg):
+def process_message(msg, name):
 	if msg.startswith("/name"):
 		router.send(msg.encode())
 	elif msg.startswith("/file"):
@@ -204,7 +204,6 @@ def send_file(receiver, filepath):
 			filebytes = readfile.read()
 			print("loaded file into memory")
 			ciphertext = encrypt(keys[receiver] ,filebytes, bytes=True)
-			print(ciphertext)
 			message = "%s:file:%s" % (receiver, ciphertext)
 			router.send(message.encode())
 			print("file sent")
@@ -215,7 +214,6 @@ def send_file(receiver, filepath):
 
 
 def receive_file(sender, message):
-	print(message)
 	filebytes = decrypt(keys[sender], message, bytes=True)
 	with open("tempfile","wb") as writefile:
 		writefile.write(filebytes)
@@ -266,5 +264,5 @@ if __name__ == "__main__":
 	thread_sock.start()
 
 	print("Connected to the router. You can start sending msgs")
-	client(chat_queue)
+	client(chat_queue, name)
 
