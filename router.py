@@ -1,5 +1,6 @@
 import socket
 import select
+from helpers import socket_buffer_size
 
 sockets = [] 
 port = 8001
@@ -27,7 +28,7 @@ def router():
 			else:
 				try:
 					# get messages from the client
-					data = sock.recv(4096).decode()
+					data = sock.recv(socket_buffer_size).decode()
 					if data:
 						# there is something in the socket
 						if data.startswith("/name"):
@@ -48,7 +49,7 @@ def router():
 								print(e)
 								send("Router", sock, "Please register a name with '/name <name>'")
 							except ReceiverNotGivenException as d:
-								print(d)
+								print(d[:200])
 								send("Router", sock, "Please prepend a name with '<receiver name>:<message>'")
 							except KeyError as k:
 								print("%s is not a registered name" % k)
