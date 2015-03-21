@@ -221,7 +221,6 @@ def send_file(receiver, filepath):
 		encrypted_filename = encrypt(keys[receiver], filename)
 		ciphertext = encrypt(keys[receiver], filebytes, bytes=True)
 		message = "%s:file:%s:%s" % (receiver, encrypted_filename, ciphertext)
-		print(message[0:300])
 		router.send(message.encode())
 		print("file sent")
 	except IOError as e:

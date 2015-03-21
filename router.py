@@ -38,7 +38,10 @@ def router():
 						else:
 							try:
 								sender_name = get_name(sock)
-								print("(%s) %s" % (sender_name, data))
+								if len(data) < 200:
+									print("(%s) %s" % (sender_name, data))
+								else:
+									print("(%s) %s ..." % (sender_name, data[:200]))
 								msg_tuple = split_msg(data)
 								send(sender_name, clients[msg_tuple[0]], msg_tuple[1])
 							except NotRegisteredException as e:
