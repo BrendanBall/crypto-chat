@@ -1,5 +1,6 @@
 import sys
 import socket
+import os
 import select
 from threading import Thread
 from queue import Queue
@@ -203,10 +204,14 @@ def send_file(receiver, filepath):
 		with open(filepath, "rb") as readfile:
 			filebytes = readfile.read()
 			print("loaded file into memory")
-			ciphertext = encrypt(keys[receiver] ,filebytes, bytes=True)
-			message = "%s:file:%s" % (receiver, ciphertext)
-			router.send(message.encode())
-			print("file sent")
+		head, tail = os.path.split(filepath)
+		filename = tail
+		encrypted_filename = encrypt(keys[receiver], filename)
+		ciphertext = encrypt(keys[receiver], filebytes, bytes=True)
+		message = "%s:file:%s:%s" % (receiver, encrypted_filename, ciphertext)
+		print(message[0:300])
+		router.send(message.encode())
+		print("file sent")
 	except IOError as e:
 		print("File not found, %s" % e)
 	except MemoryError as m:
@@ -214,8 +219,14 @@ def send_file(receiver, filepath):
 
 
 def receive_file(sender, message):
-	filebytes = decrypt(keys[sender], message, bytes=True)
-	with open("tempfile","wb") as writefile:
+	encrypted_filename, encrypted_filebytes = message.split(":")
+	filename = decrypt(keys[sender], encrypted_filename)
+	filebytes = decrypt(keys[sender], encrypted_filebytes, bytes=True)
+	download_dir = "downloads"
+	if not os.path.exists(download_dir):
+		os.makedirs(download_dir)
+	filepath = os.path.join(download_dir, filename)
+	with open(filepath,"wb") as writefile:
 		writefile.write(filebytes)
 	print("file received")
 
