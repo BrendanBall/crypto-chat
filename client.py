@@ -4,7 +4,7 @@ import os
 import select
 from threading import Thread
 from queue import Queue
-from helpers import encrypt, decrypt, hash_sha256, get_nonce
+from helpers import encrypt, decrypt, hash_sha256, get_nonce, socket_buffer_size
 
 # Globals
 router = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -253,7 +253,7 @@ def queue_sock_stream(q, s):
 		# it is merely an interface to a system call so better to use for sockets
 		ready_to_read, ready_to_write, in_error = select.select([s], [], [])
 		for sock in ready_to_read:
-			data = sock.recv(4096).decode()
+			data = sock.recv(socket_buffer_size).decode()
 			if not data:
 				sock.close()
 				q.put(("socket", "Server has closed the connection"))

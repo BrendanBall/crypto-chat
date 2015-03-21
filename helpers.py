@@ -3,7 +3,7 @@ from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
 import base64
 
-iv = b'sixteen byte key'
+socket_buffer_size = 16384
 
 def generate_auth_token(auth_request):
 	"""
