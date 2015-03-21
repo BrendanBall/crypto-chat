@@ -15,6 +15,7 @@ keys = {}
 nonces = {}
 # Used as temp storage for messages which a client tried to send before they had a secure connection
 msg_store = []
+file_store = []
 
 # States. A full state machine could be used, but the protocol is simple enough to go without.
 # These are named according to what we are waiting for.
@@ -104,6 +105,11 @@ def client(chat_queue, name):
 						process_message(msg, name)
 					msg_store.clear()
 
+					# Send any stored files
+					for file in file_store:
+						send_file(file[0], file[1])
+					file_store.clear()
+
 			# Client B
 			#---------
 			elif sender not in [x for state in states for x in state]:
@@ -180,7 +186,13 @@ def process_message(msg, name):
 		router.send(msg.encode())
 	elif msg.startswith("/file"):
 		fileargs = msg.split(" ")
-		send_file(fileargs[1], fileargs[2])
+		if fileargs[1] in active:
+			send_file(fileargs[1], fileargs[2])
+		else:
+			file_store.append((fileargs[1], fileargs[2]))
+			init_nonce.append(fileargs[1])
+			text = "%s: %s" % (fileargs[1], name)
+			router.send(text.encode())
 	else:
 		sep = msg.find(":")
 		receiver, content = msg[:sep], msg[sep+1:].strip()
