@@ -59,6 +59,7 @@ def client(chat_queue, name):
 				print(msg[1])
 			
 			elif content == "/cancel":
+				print("(Router) %s cancelled their session with you" % sender)
 				cancel_connection(sender)
 
 			# Client A

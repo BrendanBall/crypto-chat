@@ -56,8 +56,16 @@ def router():
 					else:
 						# remove the socket that's broken
 						if sock in sockets:
+							name = get_name(sock)
+							print("%s %s disconnected" % (name, sock.getpeername()))
 							sockets.remove(sock)
-
+							del clients[name]
+							for c_name, c_sock in clients.items():
+								# Cancel all connections with the disconnected client
+								if not c_name == "Auth":
+									print("Cancelling connection between %s and %s" % (c_name, name))
+									send(c_name, c_sock, "/cancel")
+								
 						# at this stage, no data means probably the connection has been broken
 						#broadcast(router_socket, sock, "Client (%s, %s) is offline\n" % addr) 
 				except Exception as e:
