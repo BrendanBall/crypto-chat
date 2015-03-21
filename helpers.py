@@ -18,6 +18,7 @@ def generate_auth_token(auth_request):
 	e_kbs = encrypt(kbs, d_kbs)
 	kas = get_client_key(auth_request[0])
 	d_kas = "%s,%s,%s,%s" % (auth_request[2], kba, auth_request[1], e_kbs)
+	print(d_kas)
 	e_kas = encrypt(kas, d_kas)
 	return e_kas
 

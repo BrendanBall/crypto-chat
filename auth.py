@@ -47,6 +47,7 @@ def auth_server():
 			message = split_msg(message[1])
 			if not message[0] == "Router":
 				auth_request = message[1].split(",")
+				print("%s: " % message[0], end="")
 				auth_token = generate_auth_token(auth_request)
 				msg_send = "%s: %s" % (message[0], auth_token)
 				router_socket.send(msg_send.encode())
