@@ -33,9 +33,14 @@ def router():
 						# there is something in the socket
 						if data.startswith("/name"):
 							name = data[6:].strip()
-							clients[name] = sock
-							send("Router", sock, "You are now known as %s" % name)
-							print("%s is now known as %s" % (sock.getpeername(), name))
+							if name in clients:
+								send("Router", sock, "A client with the name %s already exists, please choose a different name" % name)
+							else:
+								clients[name] = sock
+								send("Router", sock, "You are now known as %s" % name)
+								print("%s is now known as %s" % (sock.getpeername(), name))
+						elif data.startswith("/list"):
+							send("Router", sock, get_registered_clients())
 						else:
 							try:
 								sender_name = get_name(sock)
@@ -75,6 +80,11 @@ def router():
 
 	router_socket.close()
 
+def get_registered_clients():
+	names = "Current registered clients:"
+	for name in clients.keys():
+		names = "%s\n%s" % (names, name)
+	return names
 
 def get_name(sock):
 	for key, val in clients.items():

@@ -4,7 +4,7 @@ import os
 import select
 from threading import Thread
 from queue import Queue
-from helpers import encrypt, decrypt, hash_sha256, get_nonce, socket_buffer_size
+from helpers import encrypt, decrypt, get_client_key, get_nonce, socket_buffer_size
 
 # Globals
 router = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -55,7 +55,7 @@ def client(chat_queue, name):
 				if content.startswith("You are now known as"):
 					# Confirm up my own name
 					name = content.rsplit(" ", 1)[1]
-					keys["Auth"] = hash_sha256(name)
+					keys["Auth"] = get_client_key(name)
 				print(msg[1])
 			
 			elif content == "/cancel":
@@ -186,6 +186,11 @@ def cancel_connection(name):
 
 def process_message(msg, name):
 	if msg.startswith("/name"):
+		if name == "":
+			router.send(msg.encode())
+		else:
+			print("You already have a registered name, to change your name restart the client")
+	elif msg.startswith("/list"):
 		router.send(msg.encode())
 	elif msg.startswith("/file"):
 		fileargs = msg.split(" ")
@@ -264,31 +269,34 @@ def queue_sock_stream(q, s):
 				q.put(("socket", data))
 
 if __name__ == "__main__":
-	# Initial setup
-	if len(sys.argv) < 3:
-		print('Usage : python chat_client.py hostname port')
-		sys.exit()
-
-	host = sys.argv[1]
-	port = int(sys.argv[2])
-
-	
-	# Connect to router
 	try:
-		router.connect((host, port))
-	except socket.error:
-		print("Unable to connect")
-		sys.exit()
+		# Initial setup
+		if len(sys.argv) < 3:
+			print('Usage : python chat_client.py hostname port')
+			sys.exit()
 
-	# Queue is synchronized and completely thread safe
-	# These handle stdin and the socket connection to the server
-	chat_queue = Queue()
-	thread_stdin = Thread(target=queue_stdin, args=(chat_queue,), daemon=True)
-	thread_stdin.start()
-	thread_sock = Thread(target=queue_sock_stream, args=(chat_queue, router), daemon=True)
-	thread_sock.start()
+		host = sys.argv[1]
+		port = int(sys.argv[2])
 
-	print("Type 'quit' to quit")
-	print("Connected to the router. You can start sending msgs")
-	client(chat_queue, name)
+		
+		# Connect to router
+		try:
+			router.connect((host, port))
+		except socket.error:
+			print("Unable to connect")
+			sys.exit()
+
+		# Queue is synchronized and completely thread safe
+		# These handle stdin and the socket connection to the server
+		chat_queue = Queue()
+		thread_stdin = Thread(target=queue_stdin, args=(chat_queue,), daemon=True)
+		thread_stdin.start()
+		thread_sock = Thread(target=queue_sock_stream, args=(chat_queue, router), daemon=True)
+		thread_sock.start()
+
+		print("Type 'quit' to quit")
+		print("Connected to the router. You can start sending msgs")
+		client(chat_queue, name)
+	except KeyboardInterrupt:
+		pass
 
