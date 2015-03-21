@@ -161,6 +161,8 @@ def client(chat_queue, name):
 		# We are sending a message #
 		############################
 		elif msg[0] == "stdin":
+			if msg[1] == "quit":
+				break
 			process_message(msg[1], name)
 
 def check_nonce(name, nonce):
@@ -286,6 +288,7 @@ if __name__ == "__main__":
 	thread_sock = Thread(target=queue_sock_stream, args=(chat_queue, router), daemon=True)
 	thread_sock.start()
 
+	print("Type 'quit' to quit")
 	print("Connected to the router. You can start sending msgs")
 	client(chat_queue, name)
 

@@ -10,16 +10,15 @@ split-window -d -t 2 -h
 send-keys -t 0 'workon crypto-chat' enter C-l
 send-keys -t 0 'python router.py' enter
 
+send-keys -t 3 'workon crypto-chat' enter C-l
+send-keys -t 3 'python auth.py localhost 8001' enter
+
 send-keys -t 1 'workon crypto-chat' enter C-l
 send-keys -t 1 'python client.py localhost 8001' enter
 send-keys -t 1 '/name bob' enter
 
-
 send-keys -t 2 'workon crypto-chat' enter C-l
 send-keys -t 2 'python client.py localhost 8001' enter
 send-keys -t 2 '/name alice' enter
-
-send-keys -t 3 'workon crypto-chat' enter C-l
-send-keys -t 3 'python auth.py localhost 8001' enter
 
 select-pane -R
