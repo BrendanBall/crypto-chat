@@ -1,1 +1,1 @@
-Requirement already satisfied (use --upgrade to upgrade): transitions in /home/wraithy/code/envs/crypto-chat/lib/python3.4/site-packages
+pycrypto==2.6.1
