@@ -223,14 +223,17 @@ def send_file(receiver, filepath):
 		filebytes = b''
 		with open(filepath, "rb") as readfile:
 			filebytes = readfile.read()
-			print("loaded file into memory")
 		head, tail = os.path.split(filepath)
 		filename = tail
 		encrypted_filename = encrypt(keys[receiver], filename)
 		ciphertext = encrypt(keys[receiver], filebytes, bytes=True)
 		message = "%s:file:%s:%s" % (receiver, encrypted_filename, ciphertext)
-		router.send(message.encode())
-		print("file sent")
+		message = message.encode()
+		if len(message) > socket_buffer_size:
+			print("File size too large to send. File transfer cancelled")
+		else:
+			router.send(message)
+			print("file sent")
 	except IOError as e:
 		print("File not found, %s" % e)
 	except MemoryError as m:
