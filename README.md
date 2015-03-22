@@ -27,7 +27,7 @@ They can then send messages to other clients with
 `client name: message`
 
 To send a file to another client use:
-'/file <client name> <file path>'
+`/file <client name> <file path>`
 
 ### Contributors
 + [Brendan Ball](https://github.com/brendanball)
