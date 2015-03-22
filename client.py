@@ -97,7 +97,7 @@ def client(chat_queue, name):
 
 			elif sender in final_ack:
 				# Final 3 way handshake confirmation
-				if content == "open":
+				if content == "open" and sender in final_ack:
 					final_ack.remove(sender)
 					active.append(sender)
 
